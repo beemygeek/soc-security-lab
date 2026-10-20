@@ -1,0 +1,31 @@
+title: Windows Security or System Event Log Cleared
+id: 9a5d7e3b-6c1f-4b82-a0e4-3d8f2b7c5a19
+status: stable
+description: |
+  Clearing event logs destroys evidence and is rarely legitimate on production systems.
+  Event 1102 fires when the Security log is cleared; event 104 when System or another
+  log is cleared.
+references:
+  - https://attack.mitre.org/techniques/T1070/001/
+author: Bee (beemygeek)
+date: 2026-10-19
+tags:
+  - attack.defense_evasion
+  - attack.t1070.001
+logsource:
+  product: windows
+detection:
+  selection_security:
+    Channel: Security
+    EventID: 1102
+  selection_system:
+    Channel: System
+    EventID: 104
+    Provider_Name: Microsoft-Windows-Eventlog
+  condition: 1 of selection_*
+fields:
+  - SubjectUserName
+  - Computer
+falsepositives:
+  - Lab rebuilds or authorized forensic imaging procedures
+level: high

@@ -1,0 +1,50 @@
+title: Office Application Spawning a Shell or Script Host
+id: c1f9a3e7-5b2d-4f60-8a4e-0d7b3c9e1f24
+status: experimental
+description: |
+  Word, Excel, PowerPoint, Outlook or OneNote launching cmd, PowerShell, a script host,
+  or a LOLBin is a classic sign of a malicious macro or document exploit delivered by
+  phishing.
+references:
+  - https://attack.mitre.org/techniques/T1566/001/
+  - https://attack.mitre.org/techniques/T1204/002/
+author: Bee (beemygeek)
+date: 2026-10-19
+tags:
+  - attack.initial_access
+  - attack.t1566.001
+  - attack.execution
+  - attack.t1204.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_parent:
+    ParentImage|endswith:
+      - '\WINWORD.EXE'
+      - '\EXCEL.EXE'
+      - '\POWERPNT.EXE'
+      - '\OUTLOOK.EXE'
+      - '\ONENOTE.EXE'
+      - '\MSACCESS.EXE'
+  selection_child:
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+      - '\certutil.exe'
+      - '\bitsadmin.exe'
+  condition: selection_parent and selection_child
+fields:
+  - ParentImage
+  - Image
+  - CommandLine
+  - User
+falsepositives:
+  - Legitimate add-ins or line-of-business macros that shell out (rare; baseline and exclude by command line)
+level: high

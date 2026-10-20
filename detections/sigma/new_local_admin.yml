@@ -1,0 +1,41 @@
+title: User Added to Local Administrators or Domain Admins
+id: 2e8b4c6a-1d9f-4a73-b5c0-7f3e9a1d6b48
+status: experimental
+description: |
+  Detects a member being added to a highly privileged group. Unexpected privilege
+  grants are a common persistence and privilege-escalation step after an account is
+  compromised.
+references:
+  - https://attack.mitre.org/techniques/T1098/
+  - https://attack.mitre.org/techniques/T1078/
+author: Bee (beemygeek)
+date: 2026-10-19
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1098
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_local:
+    EventID: 4732          # member added to security-enabled local group
+    TargetUserName:
+      - 'Administrators'
+      - 'Remote Desktop Users'
+  selection_domain:
+    EventID: 4728          # member added to security-enabled global group
+    TargetUserName:
+      - 'Domain Admins'
+      - 'Enterprise Admins'
+      - 'Schema Admins'
+  condition: 1 of selection_*
+fields:
+  - SubjectUserName
+  - MemberName
+  - TargetUserName
+  - Computer
+falsepositives:
+  - Approved change tickets (correlate with the change calendar)
+  - Initial machine provisioning
+level: high
