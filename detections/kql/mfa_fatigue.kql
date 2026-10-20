@@ -1,0 +1,19 @@
+// MFA fatigue / push bombing: many MFA prompts denied or unanswered for one user,
+// optionally followed by an approval (the dangerous outcome).
+// Table: SigninLogs | ATT&CK: T1621
+// ResultType 500121 = strong auth failed / denied; 50074 = MFA required (prompted)
+let Window = 1h;
+let Threshold = 5;
+SigninLogs
+| where TimeGenerated > ago(1d)
+| where ResultType in ("500121", "50074", "0")
+| summarize
+    Prompts   = countif(ResultType in ("500121", "50074")),
+    Approved  = countif(ResultType == "0" and AuthenticationRequirement == "multiFactorAuthentication"),
+    IPs       = make_set(IPAddress, 10),
+    FirstSeen = min(TimeGenerated),
+    LastSeen  = max(TimeGenerated)
+    by UserPrincipalName, bin(TimeGenerated, Window)
+| where Prompts >= Threshold
+| extend Severity = iff(Approved > 0, "High - approved after repeated prompts", "Medium - repeated prompts")
+| order by Prompts desc

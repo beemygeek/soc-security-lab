@@ -1,0 +1,19 @@
+// Impossible travel: successful sign-ins for the same user from two countries
+// closer together in time than a flight could cover.
+// Table: SigninLogs (Microsoft Entra ID) | ATT&CK: T1078.004
+// Tuning: raise MaxHours or exclude known VPN egress countries/IPs.
+let LookBack = 1d;
+let MaxHours = 2;
+SigninLogs
+| where TimeGenerated > ago(LookBack)
+| where ResultType == "0"                       // successful sign-ins only
+| extend Country = tostring(LocationDetails.countryOrRegion)
+| where isnotempty(Country)
+| project TimeGenerated, UserPrincipalName, Country, IPAddress, AppDisplayName, ClientAppUsed
+| order by UserPrincipalName asc, TimeGenerated asc
+| serialize
+| extend PrevCountry = prev(Country), PrevTime = prev(TimeGenerated), PrevUser = prev(UserPrincipalName), PrevIP = prev(IPAddress)
+| where UserPrincipalName == PrevUser and Country != PrevCountry
+| extend HoursApart = datetime_diff('minute', TimeGenerated, PrevTime) / 60.0
+| where HoursApart < MaxHours
+| project UserPrincipalName, PrevTime, PrevCountry, PrevIP, TimeGenerated, Country, IPAddress, HoursApart, AppDisplayName

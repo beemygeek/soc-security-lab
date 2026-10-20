@@ -1,0 +1,18 @@
+// Executables launched from user-writable folders that are rare across the fleet.
+// Catches payloads dropped by phishing into Downloads/AppData/Temp.
+// Table: DeviceProcessEvents (Defender for Endpoint) | ATT&CK: T1204.002
+let Lookback = 7d;
+let RareThreshold = 3;   // seen on this many devices or fewer
+let Suspicious = DeviceProcessEvents
+| where Timestamp > ago(1d)
+| where FolderPath matches regex @"(?i)\\Users\\[^\\]+\\(Downloads|AppData\\Local\\Temp|AppData\\Roaming|Desktop)\\"
+| where FileName endswith ".exe" or FileName endswith ".scr" or FileName endswith ".com";
+let Prevalence = DeviceProcessEvents
+| where Timestamp > ago(Lookback)
+| summarize DeviceCount = dcount(DeviceId) by SHA256;
+Suspicious
+| join kind=inner Prevalence on SHA256
+| where DeviceCount <= RareThreshold
+| project Timestamp, DeviceName, AccountName, FileName, FolderPath, SHA256, ProcessCommandLine,
+          InitiatingProcessFileName, DeviceCount
+| order by Timestamp desc

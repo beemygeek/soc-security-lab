@@ -1,0 +1,14 @@
+// New inbox rules that forward/redirect mail externally or delete/hide messages.
+// A top indicator of business email compromise after an account takeover.
+// Table: OfficeActivity (Exchange) | ATT&CK: T1114.003, T1564.008
+let InternalDomains = dynamic(["contoso.com"]);   // <-- set to your accepted domains
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where Operation in ("New-InboxRule", "Set-InboxRule", "UpdateInboxRules")
+| extend Params = tostring(Parameters)
+| extend ForwardTo = extract(@'"(ForwardTo|RedirectTo|ForwardAsAttachmentTo)","Value":"([^"]+)"', 2, Params)
+| extend Deletes   = Params has_any ("DeleteMessage", "MoveToFolder\",\"Value\":\"RSS", "Conversation History")
+| extend External  = isnotempty(ForwardTo) and not(ForwardTo has_any (InternalDomains))
+| where External or Deletes
+| project TimeGenerated, UserId, ClientIP, Operation, ForwardTo, Deletes, Params
+| order by TimeGenerated desc
